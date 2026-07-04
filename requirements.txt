@@ -1,0 +1,9 @@
+numpy
+pandas
+kagglehub
+chonkie 
+sentence-transformers
+wandb
+matplotlib
+seaborn
+torch
