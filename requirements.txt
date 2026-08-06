@@ -13,3 +13,5 @@ tqdm>=4.66
 jsonlines
 chonkie
 kagglehub
+sentencepiece 
+tiktoken

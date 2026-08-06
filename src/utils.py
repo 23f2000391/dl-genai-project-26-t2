@@ -14,6 +14,7 @@ from string import punctuation
 import warnings                 
 import string
 import re
+import os
 import unicodedata
 
 from transformers import pipeline,AutoTokenizer,AutoModel,AutoModelForCausalLM,AutoModelForSequenceClassification,AutoModelForMultipleChoice
@@ -53,7 +54,7 @@ torch.manual_seed(42)
 np.random.seed(42)
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-CONFIG={
+'''CONFIG={
     "lr":2e-5,
     "loss":"CrossEntropyLoss",
     "model":"DeBERTa",
@@ -66,6 +67,25 @@ CONFIG={
     "batch_size":16,
     "project_name":"23f2000391-t22026",
     "weight_decay":0.01,
+}'''
+
+CONFIG={
+    "project_name":"23f2000391-t22026",
+    "model":"BiLSTM + Attention Score",
+    "tokenizer":"bert-base-uncased",
+    "batch_size":16,
+    "split":"Stratified-K-Fold",
+    "folds_num":5,
+    "embedding_dim":300,
+    "hidden_dim":256,
+    "num_layers":2,
+    "dropout":0.3,
+    "lr":2e-4,
+    "weight_decay":1e-2,
+    "epochs":10,
+    "optimizer":"AdamW",
+    "loss":"CrossEntropyLoss",
+    "scheduler":"ReduceLROnPlateau"
 }
 
 GLOBAL_choices=["A","B","C","D","E"]
@@ -77,7 +97,7 @@ label2id={
     'D':3,
     'E':4
 }
-id2label = {
+id2label={
     0:"A",
     1:"B",
     2:"C",
@@ -121,30 +141,48 @@ def clean_prompt(text):
 
     return text
 
-def map_at_3(true,pred):
-    scores=[]
-    for actual,preds in zip(true,pred):
-        score=0.0
-        for rank,pred in enumerate(preds,start=1):
-            if pred==actual:
-                score=1.0/rank
-                break
-        scores.append(score)
-    return np.mean(scores)
+def load_train():
+    train=pd.read_csv("data/train.csv")
 
-def top3_accuracy(y_true, predictions):
-    return np.mean([truth in pred for truth, pred in zip(y_true, predictions)])
+    train.drop(columns="id", inplace=True)
 
-def top1_accuracy(y_true, predictions):
-    top1=[pred[0] if len(pred) else "Z" for pred in predictions]
+    train["correct_option"]=train.apply(
+        lambda row: row[row["answer"]],
+        axis=1
+    )
 
-    return accuracy_score(y_true,top1)
+    for col in ["prompt", "A", "B", "C", "D", "E"]:
+        train[f"clean_{col}"]=train[col].apply(clean_text)
 
-def macro_f1_score(y_true, predictions):
-    top1_preds=[]
+    train["clean_prompt"]=train["clean_prompt"].apply(clean_prompt)
 
-    for pred in predictions:
-        top1_preds.append(pred[0])
+    train["combined_text"]=(
+        "Question: " + train["clean_prompt"] +
+        "\n\nA: " + train["A"] +
+        "\nB: " + train["B"] +
+        "\nC: " + train["C"] +
+        "\nD: " + train["D"] +
+        "\nE: " + train["E"]
+    )
 
-    return f1_score(y_true,top1_preds,average="macro",labels=["A", "B", "C", "D", "E"],zero_division=0)
+    return train
 
+def load_test():
+    test=pd.read_csv("data/test.csv")
+    test.drop(columns="id", inplace=True)
+
+    for col in ["prompt", "A", "B", "C", "D", "E"]:
+        test[f"clean_{col}"]=test[col].apply(clean_text)
+
+    test["clean_prompt"]=test["clean_prompt"].apply(clean_prompt)
+
+    test["combined_text"]=(
+        "Question: " + test["clean_prompt"] +
+        "\n\nA: " + test["A"] +
+        "\nB: " + test["B"] +
+        "\nC: " + test["C"] +
+        "\nD: " + test["D"] +
+        "\nE: " + test["E"]
+    )
+
+    return test
