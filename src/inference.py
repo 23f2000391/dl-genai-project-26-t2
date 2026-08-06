@@ -14,7 +14,7 @@ def main():
     
 
     test["prediction"]=test_predictions
-    test.to_csv("../data/submission.csv",index=False)
+    test.to_csv("data/submission.csv",index=False)
     print("Submission saved.")
 
 if __name__ == "__main__":

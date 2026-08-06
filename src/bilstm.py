@@ -261,7 +261,7 @@ def bilstm_predict_test(test):
     test_loader=DataLoader(test_dataset,batch_size=32,shuffle=False)
 
     bilstm_model = BiLSTMAttention(
-        vocab_size=tokenizer.vocab_size,
+        vocab_size=get_tokenizer().vocab_size,
         embedding_dim=300,
         hidden_dim=256,
         num_layers=2,
